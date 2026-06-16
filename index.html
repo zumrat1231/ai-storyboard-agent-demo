@@ -1215,7 +1215,7 @@ function inferAppearance(name, index) {
   return index === 0 ? "22-28岁，清秀真实，眼神有委屈和倔强" : "25-35岁，短剧写实人物形象";
 }
 
-function generate() {
+async function generate() {
   const script = els.scriptInput.value.trim();
   if (!script) {
     els.scriptInput.focus();
@@ -1226,6 +1226,18 @@ function generate() {
   state.genre = els.genreSelect.value;
   state.platform = els.platformSelect.value;
 
+  const serverResult = await requestServerGeneration({
+    project: state.project,
+    genre: state.genre,
+    platform: state.platform,
+    script,
+  });
+
+  if (serverResult) {
+    applyGenerationResult(serverResult);
+    return;
+  }
+
   const sceneBlocks = splitScenes(script);
   state.scenes = buildSceneCards(sceneBlocks);
   const names = extractCharacters(script);
@@ -1233,6 +1245,69 @@ function generate() {
   state.shots = buildShots(state.scenes, names, state.genre, state.platform);
   state.selectedShotId = state.shots[0]?.id || null;
   renderAll();
+}
+
+async function requestServerGeneration(payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1800);
+  try {
+    const response = await fetch("./api/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const result = await response.json();
+    if (!Array.isArray(result.shots) || !Array.isArray(result.scenes)) return null;
+    return result;
+  } catch (error) {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function applyGenerationResult(result) {
+  state.project = result.project || state.project;
+  state.genre = result.genre || state.genre;
+  state.platform = result.platform || state.platform;
+  state.scenes = Array.isArray(result.scenes) ? result.scenes : [];
+  state.characters = Array.isArray(result.characters) ? result.characters : [];
+  state.shots = Array.isArray(result.shots)
+    ? result.shots.map((shot, index) => normalizeServerShot(shot, index))
+    : [];
+  state.selectedShotId = state.shots[0]?.id || null;
+  renderAll();
+}
+
+function normalizeServerShot(shot, index) {
+  const id = shot.id || `S${String(index + 1).padStart(2, "0")}`;
+  const qc = shot.qc || buildQcScore(
+    shot.description || "",
+    shot.shotType || "中景",
+    shot.camera || "固定镜头",
+    shot.emotion || "情绪递进",
+    shot.people || []
+  );
+  return {
+    id,
+    sceneId: shot.sceneId || "C1",
+    sceneName: shot.sceneName || "核心场景",
+    title: shot.title || `${id} ${shot.shotType || "中景"}`,
+    description: shot.description || "",
+    shotType: shot.shotType || "中景",
+    camera: shot.camera || "固定镜头",
+    people: Array.isArray(shot.people) ? shot.people : [],
+    emotion: shot.emotion || "情绪递进",
+    dialogue: shot.dialogue || "",
+    duration: Number(shot.duration) || 3,
+    priority: shot.priority || "中",
+    imagePrompt: shot.imagePrompt || shot.image_prompt || "",
+    videoPrompt: shot.videoPrompt || shot.video_prompt || "",
+    status: shot.status || "待确认",
+    qc,
+  };
 }
 
 function renderAll() {
