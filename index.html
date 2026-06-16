@@ -1,0 +1,1344 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI短剧分镜Agent 内测版</title>
+    <style>
+:root {
+  --bg: #f5f2eb;
+  --panel: #fffdf8;
+  --ink: #1d2530;
+  --muted: #687381;
+  --line: #ded7ca;
+  --accent: #1f7a68;
+  --accent-strong: #14584b;
+  --coral: #c95f43;
+  --gold: #a87920;
+  --blue: #2d668f;
+  --shadow: 0 18px 44px rgba(35, 31, 24, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 auto 16px;
+  max-width: 1600px;
+}
+
+.eyebrow,
+.section-label {
+  margin: 0 0 5px;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+h2 {
+  margin-bottom: 0;
+  font-size: 18px;
+}
+
+h3 {
+  margin-bottom: 8px;
+  font-size: 17px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.status-pill {
+  border: 1px solid rgba(31, 122, 104, 0.25);
+  background: #eaf4ef;
+  color: var(--accent-strong);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.primary-btn,
+.ghost-btn,
+.clip-actions button {
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-weight: 800;
+}
+
+.primary-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.primary-btn:hover {
+  background: var(--accent-strong);
+}
+
+.ghost-btn,
+.clip-actions button {
+  border: 1px solid var(--line);
+  background: #fffaf0;
+  color: var(--ink);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.78fr) minmax(520px, 1.35fr) minmax(320px, 0.82fr);
+  gap: 14px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.panel {
+  min-height: calc(100vh - 116px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.script-panel,
+.output-panel,
+.video-panel {
+  padding: 16px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.panel-head.compact {
+  margin-bottom: 12px;
+}
+
+label {
+  display: block;
+  margin-bottom: 7px;
+  color: #3e4650;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.field-row {
+  margin-bottom: 12px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid #cfc6b7;
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+  outline: none;
+}
+
+input,
+select {
+  height: 40px;
+  padding: 0 11px;
+}
+
+textarea {
+  min-height: 360px;
+  resize: vertical;
+  padding: 12px;
+  line-height: 1.7;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 122, 104, 0.14);
+}
+
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.mini-stats div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbf7ee;
+}
+
+.mini-stats strong {
+  display: block;
+  font-size: 20px;
+}
+
+.mini-stats span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.notice {
+  border-left: 4px solid var(--gold);
+  background: #fff6df;
+  border-radius: 8px;
+  padding: 12px;
+  color: #624918;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.tab-btn {
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #fff9ed;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tab-btn.active {
+  background: var(--ink);
+  color: white;
+  border-color: var(--ink);
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+  border: 1px dashed #cabda8;
+  border-radius: 8px;
+  background: #fbf6ec;
+  text-align: center;
+  padding: 22px;
+}
+
+.empty-state.hidden {
+  display: none;
+}
+
+.empty-state p {
+  max-width: 460px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.empty-visual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  width: 160px;
+  height: 90px;
+  margin-bottom: 18px;
+}
+
+.empty-visual span {
+  display: block;
+  width: 44px;
+  border-radius: 8px 8px 3px 3px;
+  background: linear-gradient(180deg, #e7b464, #1f7a68);
+}
+
+.empty-visual span:nth-child(1) {
+  height: 52px;
+}
+
+.empty-visual span:nth-child(2) {
+  height: 78px;
+  background: linear-gradient(180deg, #d98b73, #2d668f);
+}
+
+.empty-visual span:nth-child(3) {
+  height: 64px;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+.shots-list,
+.prompt-list {
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.shot-card {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: white;
+}
+
+.shot-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 122, 104, 0.12);
+}
+
+.thumb {
+  position: relative;
+  min-height: 72px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #2d668f, #e4b15f);
+}
+
+.thumb::before,
+.preview-frame::before {
+  content: "";
+  position: absolute;
+  inset: 12% 18%;
+  border-radius: 50% 50% 40% 40%;
+  background: rgba(255, 253, 248, 0.82);
+}
+
+.thumb::after,
+.preview-frame::after {
+  content: "";
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 12%;
+  height: 25%;
+  border-radius: 50% 50% 0 0;
+  background: rgba(29, 37, 48, 0.72);
+}
+
+.shot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.tag {
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: #eef5f1;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tag.coral {
+  background: #fff0ea;
+  color: #9d3f27;
+}
+
+.tag.blue {
+  background: #eaf2f8;
+  color: #23577c;
+}
+
+.shot-card h3 {
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
+.shot-card p {
+  margin-bottom: 8px;
+  color: #4b5662;
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+.shot-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.shot-tools button {
+  min-height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: #fbf7ef;
+  color: var(--ink);
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.info-card,
+.prompt-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 12px;
+}
+
+.info-card h3,
+.prompt-card h3 {
+  font-size: 15px;
+}
+
+.info-card p,
+.prompt-card p {
+  color: #4b5662;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.prompt-card textarea {
+  min-height: 120px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.video-preview {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf1;
+  padding: 10px;
+}
+
+.preview-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 9;
+  min-height: 160px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: linear-gradient(140deg, #1f7a68 0%, #2d668f 52%, #c95f43 100%);
+  color: white;
+  text-align: center;
+}
+
+.preview-frame p {
+  position: relative;
+  z-index: 2;
+  max-width: 180px;
+  margin: 0;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.frame-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+  background-size: 33.3% 33.3%;
+}
+
+.preview-meta {
+  display: grid;
+  gap: 4px;
+  padding-top: 10px;
+}
+
+.preview-meta span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.clip-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.clip-actions button {
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.timeline-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 14px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.timeline {
+  display: grid;
+  gap: 8px;
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.clip {
+  display: grid;
+  grid-template-columns: 48px 1fr 46px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 8px;
+}
+
+.clip-index {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  border-radius: 6px;
+  background: #edf5f1;
+  color: var(--accent-strong);
+  font-weight: 900;
+}
+
+.clip b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.clip span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.clip-duration {
+  color: var(--coral);
+  text-align: right;
+  font-weight: 900;
+}
+
+.export-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.wide {
+  width: 100%;
+}
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    min-height: auto;
+  }
+
+  textarea {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 680px) {
+  .app-shell {
+    padding: 12px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .topbar-actions,
+  .segmented {
+    justify-content: flex-start;
+  }
+
+  .two-col,
+  .card-grid,
+  .shot-card {
+    grid-template-columns: 1fr;
+  }
+
+  .clip-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Storyboard Agent Beta</p>
+          <h1>AI短剧分镜生产台</h1>
+        </div>
+        <div class="topbar-actions">
+          <span class="status-pill">定向内测版</span>
+          <button id="loadSampleBtn" class="ghost-btn" type="button">载入样例</button>
+          <button id="generateBtn" class="primary-btn" type="button">生成分镜包</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel script-panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-label">01 剧本输入</p>
+              <h2>剧本到生产资料</h2>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label for="projectTitle">项目名称</label>
+            <input id="projectTitle" value="都市反转短剧试跑" />
+          </div>
+
+          <div class="field-row two-col">
+            <div>
+              <label for="genreSelect">题材模板</label>
+              <select id="genreSelect">
+                <option value="都市情感">都市情感</option>
+                <option value="霸总爽剧">霸总爽剧</option>
+                <option value="复仇反转">复仇反转</option>
+                <option value="古装权谋">古装权谋</option>
+                <option value="悬疑惊悚">悬疑惊悚</option>
+                <option value="小说漫剧">小说漫剧</option>
+              </select>
+            </div>
+            <div>
+              <label for="platformSelect">Prompt平台</label>
+              <select id="platformSelect">
+                <option value="即梦">即梦</option>
+                <option value="可灵">可灵</option>
+                <option value="海螺">海螺</option>
+                <option value="Vidu">Vidu</option>
+                <option value="Runway">Runway</option>
+              </select>
+            </div>
+          </div>
+
+          <label for="scriptInput">客户剧本</label>
+          <textarea id="scriptInput" spellcheck="false" placeholder="粘贴一段短剧剧本，点击生成分镜包。建议先用3-5分钟剧本试跑。"></textarea>
+
+          <div class="mini-stats">
+            <div>
+              <strong id="charCount">0</strong>
+              <span>字数</span>
+            </div>
+            <div>
+              <strong id="sceneCount">0</strong>
+              <span>预估场次</span>
+            </div>
+            <div>
+              <strong id="shotCount">0</strong>
+              <span>镜头</span>
+            </div>
+          </div>
+
+          <div class="notice">
+            当前演示版重点打通“剧本拆解、分镜、角色场景、prompt和视频片段任务”。正式版将接入生图/生视频API、素材库和合成队列。
+          </div>
+        </section>
+
+        <section class="panel output-panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-label">02 分镜输出</p>
+              <h2>镜头表与Prompt</h2>
+            </div>
+            <div class="segmented">
+              <button class="tab-btn active" data-tab="shots" type="button">分镜表</button>
+              <button class="tab-btn" data-tab="characters" type="button">角色卡</button>
+              <button class="tab-btn" data-tab="scenes" type="button">场景卡</button>
+              <button class="tab-btn" data-tab="prompts" type="button">Prompt</button>
+            </div>
+          </div>
+
+          <div id="emptyState" class="empty-state">
+            <div class="empty-visual">
+              <span></span><span></span><span></span>
+            </div>
+            <h3>等待生成第一版分镜生产包</h3>
+            <p>载入样例或粘贴客户剧本，系统会生成可编辑镜头表、角色卡、场景卡和AI视频任务。</p>
+          </div>
+
+          <div id="shotsTab" class="tab-pane active">
+            <div id="shotsList" class="shots-list"></div>
+          </div>
+
+          <div id="charactersTab" class="tab-pane">
+            <div id="charactersList" class="card-grid"></div>
+          </div>
+
+          <div id="scenesTab" class="tab-pane">
+            <div id="scenesList" class="card-grid"></div>
+          </div>
+
+          <div id="promptsTab" class="tab-pane">
+            <div id="promptsList" class="prompt-list"></div>
+          </div>
+        </section>
+
+        <aside class="panel video-panel">
+          <div class="panel-head compact">
+            <div>
+              <p class="section-label">03 视频片段操作台</p>
+              <h2>按分镜驱动视频</h2>
+            </div>
+          </div>
+
+          <div class="video-preview">
+            <div id="previewFrame" class="preview-frame">
+              <div class="frame-lines"></div>
+              <p>选择镜头预览视频任务</p>
+            </div>
+            <div class="preview-meta">
+              <strong id="selectedShotTitle">未选择镜头</strong>
+              <span id="selectedShotMeta">生成后可逐镜头操作</span>
+            </div>
+          </div>
+
+          <div class="clip-actions">
+            <button id="markReadyBtn" type="button">标记可生成</button>
+            <button id="rewriteBtn" type="button">重写Prompt</button>
+            <button id="replaceBtn" type="button">替换片段</button>
+          </div>
+
+          <div class="timeline-head">
+            <span>视频时间线</span>
+            <strong id="totalDuration">0s</strong>
+          </div>
+          <div id="timeline" class="timeline"></div>
+
+          <div class="export-box">
+            <button id="exportCsvBtn" class="primary-btn wide" type="button">导出分镜CSV</button>
+            <button id="exportJsonBtn" class="ghost-btn wide" type="button">导出生产JSON</button>
+            <button id="copySummaryBtn" class="ghost-btn wide" type="button">复制客户汇报</button>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+const sampleScript = `第1集《错认的总裁》
+
+场景一：夜晚，五星酒店走廊。
+林晚穿着服务员制服，抱着一摞文件匆匆赶路。她刚被继妹设计，误闯了顶层套房。
+顾承洲站在门口，西装凌厉，眼神冷淡。
+顾承洲：你是谁派来的？
+林晚：我只是来送文件的，我不知道这里是你的房间。
+走廊尽头传来脚步声，继妹林薇带着记者赶来。
+
+场景二：顶层套房内。
+顾承洲把林晚拉进房间，关上门。林晚惊慌后退。
+林晚：你想干什么？
+顾承洲：外面的人是冲你来的。你现在出去，就会被他们拍到。
+林晚愣住，听见门外林薇假装关心地喊她名字。
+
+场景三：酒店大厅，第二天清晨。
+林薇面对记者哭诉，说林晚为了攀附权贵不择手段。
+顾承洲突然出现，牵起林晚的手。
+顾承洲：介绍一下，她是我的未婚妻。
+林晚震惊抬头，林薇脸色瞬间僵住。`;
+
+const state = {
+  project: "",
+  genre: "都市情感",
+  platform: "即梦",
+  scenes: [],
+  shots: [],
+  characters: [],
+  selectedShotId: null,
+};
+
+const els = {
+  scriptInput: document.getElementById("scriptInput"),
+  projectTitle: document.getElementById("projectTitle"),
+  genreSelect: document.getElementById("genreSelect"),
+  platformSelect: document.getElementById("platformSelect"),
+  generateBtn: document.getElementById("generateBtn"),
+  loadSampleBtn: document.getElementById("loadSampleBtn"),
+  charCount: document.getElementById("charCount"),
+  sceneCount: document.getElementById("sceneCount"),
+  shotCount: document.getElementById("shotCount"),
+  emptyState: document.getElementById("emptyState"),
+  shotsList: document.getElementById("shotsList"),
+  charactersList: document.getElementById("charactersList"),
+  scenesList: document.getElementById("scenesList"),
+  promptsList: document.getElementById("promptsList"),
+  timeline: document.getElementById("timeline"),
+  totalDuration: document.getElementById("totalDuration"),
+  selectedShotTitle: document.getElementById("selectedShotTitle"),
+  selectedShotMeta: document.getElementById("selectedShotMeta"),
+  previewFrame: document.getElementById("previewFrame"),
+  exportCsvBtn: document.getElementById("exportCsvBtn"),
+  exportJsonBtn: document.getElementById("exportJsonBtn"),
+  copySummaryBtn: document.getElementById("copySummaryBtn"),
+  markReadyBtn: document.getElementById("markReadyBtn"),
+  rewriteBtn: document.getElementById("rewriteBtn"),
+  replaceBtn: document.getElementById("replaceBtn"),
+};
+
+const shotTypes = ["特写", "近景", "中景", "全景", "过肩镜头", "反打"];
+const cameraMoves = ["缓慢推进", "轻微横移", "固定镜头", "跟拍", "快速切入", "低角度推进"];
+const priorities = ["高", "中", "中", "高", "低"];
+
+function splitScenes(script) {
+  const blocks = script
+    .split(/\n\s*\n|(?=场景[一二三四五六七八九十\d]+[:：])/g)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (blocks.length <= 1) {
+    const sentences = script
+      .split(/[。！？\n]/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 8);
+    const groupSize = Math.max(2, Math.ceil(sentences.length / 3));
+    return [0, 1, 2]
+      .map((index) => sentences.slice(index * groupSize, (index + 1) * groupSize).join("。"))
+      .filter(Boolean);
+  }
+
+  return blocks;
+}
+
+function extractCharacters(script) {
+  const names = new Set();
+  const dialogueMatches = script.matchAll(/([\u4e00-\u9fa5]{2,4})[:：]/g);
+  for (const match of dialogueMatches) names.add(match[1]);
+
+  const common = ["林晚", "顾承洲", "林薇", "沈总", "女主", "男主", "记者", "助理", "母亲", "继妹"];
+  common.forEach((name) => {
+    if (script.includes(name)) names.add(name);
+  });
+
+  const list = Array.from(names).slice(0, 6);
+  if (!list.length) return ["女主", "男主", "反派"];
+  return list;
+}
+
+function sceneNameFromBlock(block, index) {
+  const explicit = block.match(/场景[一二三四五六七八九十\d]+[:：]?\s*([^。\n]+)/);
+  if (explicit) return explicit[1].replace(/[，,].*$/, "").slice(0, 16);
+  const place = block.match(/(酒店|办公室|大厅|套房|走廊|咖啡厅|医院|别墅|街道|车内|会议室|古寺|宫殿|树林|餐厅)/);
+  return place ? `${place[1]}场景` : `核心场景${index + 1}`;
+}
+
+function pickEmotion(text, index) {
+  if (/震惊|僵住|愣住|惊慌|害怕/.test(text)) return "震惊压迫";
+  if (/哭|委屈|误会|背叛/.test(text)) return "委屈反转";
+  if (/冷淡|质问|威胁|冲/.test(text)) return "强冲突";
+  if (/牵起|保护|未婚妻|出现/.test(text)) return "高光反转";
+  return ["紧张推进", "情绪递进", "信息揭示"][index % 3];
+}
+
+function buildShots(scenes, characters, genre, platform) {
+  const shots = [];
+  let shotIndex = 1;
+
+  scenes.forEach((scene, sceneIndex) => {
+    const sentences = scene.raw
+      .split(/[。！？\n]/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 4);
+    const usable = sentences.length ? sentences : [scene.raw];
+    const selected = usable.slice(0, Math.min(4, Math.max(2, usable.length)));
+
+    selected.forEach((sentence, localIndex) => {
+      const type = shotTypes[(shotIndex + localIndex) % shotTypes.length];
+      const move = cameraMoves[(shotIndex + sceneIndex) % cameraMoves.length];
+      const duration = localIndex === selected.length - 1 ? 4 : 3;
+      const speakerMatch = sentence.match(/^([\u4e00-\u9fa5]{2,4})[:：](.+)$/);
+      const dialogue = speakerMatch ? speakerMatch[2] : "";
+      const people = characters.filter((name) => sentence.includes(name));
+      const mainPeople = people.length ? people : characters.slice(0, Math.min(2, characters.length));
+      const emotion = pickEmotion(sentence, localIndex);
+      const title = `镜头${String(shotIndex).padStart(2, "0")} ${type} ${mainPeople.join("、")}`;
+      const prompt = buildPrompt({
+        scene,
+        sentence,
+        type,
+        move,
+        people: mainPeople,
+        emotion,
+        genre,
+        platform,
+      });
+
+      shots.push({
+        id: `S${String(shotIndex).padStart(2, "0")}`,
+        sceneId: scene.id,
+        sceneName: scene.name,
+        title,
+        description: sentence.replace(/^([\u4e00-\u9fa5]{2,4})[:：]/, ""),
+        shotType: type,
+        camera: move,
+        people: mainPeople,
+        emotion,
+        dialogue,
+        duration,
+        priority: priorities[shotIndex % priorities.length],
+        imagePrompt: prompt.image,
+        videoPrompt: prompt.video,
+        status: "待确认",
+      });
+      shotIndex += 1;
+    });
+  });
+
+  return shots;
+}
+
+function buildPrompt({ scene, sentence, type, move, people, emotion, genre, platform }) {
+  const platformHint = {
+    "即梦": "写实短剧质感，人物脸部稳定，镜头语言清晰，竖屏9:16",
+    "可灵": "电影级光影，动作连续自然，短剧节奏，竖屏构图",
+    "海螺": "真实人物表演，情绪变化明确，画面干净",
+    "Vidu": "consistent character, cinematic lighting, vertical drama shot",
+    "Runway": "cinematic vertical shot, consistent character identity, controlled camera motion",
+  }[platform];
+
+  const base = `${genre}，${scene.name}，${people.join("、")}，${sentence}，${type}，${move}，${emotion}，${platformHint}`;
+  return {
+    image: `${base}。画面要求：主体清晰，人物表情明确，背景不杂乱，商业短剧海报级首帧，避免多余人物、畸形手、错乱文字。`,
+    video: `${base}。视频要求：${move}，角色动作从静到动，情绪递进明显，时长3-4秒，保持人物服装和五官一致，不要跳切，不要突然变脸。`,
+  };
+}
+
+function buildSceneCards(sceneBlocks) {
+  return sceneBlocks.map((raw, index) => {
+    const name = sceneNameFromBlock(raw, index);
+    return {
+      id: `C${index + 1}`,
+      name,
+      raw,
+      mood: pickEmotion(raw, index),
+      visual: /夜晚|黑|惊/.test(raw) ? "低照度、强对比、压迫感" : "干净商业短剧光线、主体突出",
+      props: extractProps(raw),
+    };
+  });
+}
+
+function extractProps(text) {
+  const props = ["文件", "手机", "房卡", "记者", "车", "合同", "酒杯", "门", "戒指", "照片"]
+    .filter((item) => text.includes(item));
+  return props.length ? props.join("、") : "核心道具按剧本现场提取";
+}
+
+function buildCharacterCards(names, script, genre) {
+  return names.map((name, index) => {
+    const roleType = index === 0 ? "女主/核心视角" : index === 1 ? "男主/关键推动" : "冲突角色/功能人物";
+    const temperament = ["隐忍但有爆发力", "冷静强势，有压迫感", "外柔内狠，制造冲突", "信息推动者"][index % 4];
+    return {
+      name,
+      roleType,
+      appearance: inferAppearance(name, index),
+      costume: genre.includes("古装") ? "精致古装造型，服饰层次明确" : index === 0 ? "简洁浅色服装，弱势但干净" : "深色商务或精致都市服装",
+      temperament,
+      lock: "五官、发型、服装主色、年龄感保持一致",
+      negative: "不要变脸，不要换发型，不要年龄漂移，不要多手指，不要文字水印",
+      mentions: (script.match(new RegExp(name, "g")) || []).length,
+    };
+  });
+}
+
+function inferAppearance(name, index) {
+  if (/顾|沈|陆|傅|总|男主/.test(name)) return "28-35岁，轮廓清晰，眼神冷峻，商务精英感";
+  if (/薇|妹|反派/.test(name)) return "24-30岁，妆容精致，表情有攻击性";
+  if (/记者|助理/.test(name)) return "职业装，表情敏锐，行动目的明确";
+  return index === 0 ? "22-28岁，清秀真实，眼神有委屈和倔强" : "25-35岁，短剧写实人物形象";
+}
+
+function generate() {
+  const script = els.scriptInput.value.trim();
+  if (!script) {
+    els.scriptInput.focus();
+    return;
+  }
+
+  state.project = els.projectTitle.value.trim() || "未命名项目";
+  state.genre = els.genreSelect.value;
+  state.platform = els.platformSelect.value;
+
+  const sceneBlocks = splitScenes(script);
+  state.scenes = buildSceneCards(sceneBlocks);
+  const names = extractCharacters(script);
+  state.characters = buildCharacterCards(names, script, state.genre);
+  state.shots = buildShots(state.scenes, names, state.genre, state.platform);
+  state.selectedShotId = state.shots[0]?.id || null;
+  renderAll();
+}
+
+function renderAll() {
+  els.emptyState.classList.toggle("hidden", state.shots.length > 0);
+  updateStats();
+  renderShots();
+  renderCharacters();
+  renderScenes();
+  renderPrompts();
+  renderTimeline();
+  renderSelectedShot();
+}
+
+function updateStats() {
+  const text = els.scriptInput.value;
+  els.charCount.textContent = text.length;
+  els.sceneCount.textContent = state.scenes.length;
+  els.shotCount.textContent = state.shots.length;
+}
+
+function renderShots() {
+  els.shotsList.innerHTML = state.shots
+    .map((shot) => `
+      <article class="shot-card ${shot.id === state.selectedShotId ? "selected" : ""}" data-shot-id="${shot.id}">
+        <div class="thumb"></div>
+        <div>
+          <div class="shot-meta">
+            <span class="tag">${shot.id}</span>
+            <span class="tag blue">${shot.shotType}</span>
+            <span class="tag coral">${shot.emotion}</span>
+            <span class="tag">${shot.duration}s</span>
+          </div>
+          <h3>${escapeHtml(shot.title)}</h3>
+          <p>${escapeHtml(shot.description)}</p>
+          <div class="shot-tools">
+            <button type="button" data-action="select" data-id="${shot.id}">预览</button>
+            <button type="button" data-action="ready" data-id="${shot.id}">可生成</button>
+            <button type="button" data-action="rewrite" data-id="${shot.id}">返修Prompt</button>
+          </div>
+        </div>
+      </article>
+    `)
+    .join("");
+}
+
+function renderCharacters() {
+  els.charactersList.innerHTML = state.characters
+    .map((item) => `
+      <article class="info-card">
+        <h3>${escapeHtml(item.name)}</h3>
+        <p><strong>定位：</strong>${escapeHtml(item.roleType)}</p>
+        <p><strong>外貌：</strong>${escapeHtml(item.appearance)}</p>
+        <p><strong>服装：</strong>${escapeHtml(item.costume)}</p>
+        <p><strong>锁定项：</strong>${escapeHtml(item.lock)}</p>
+        <p><strong>负面词：</strong>${escapeHtml(item.negative)}</p>
+      </article>
+    `)
+    .join("");
+}
+
+function renderScenes() {
+  els.scenesList.innerHTML = state.scenes
+    .map((item) => `
+      <article class="info-card">
+        <h3>${escapeHtml(item.name)}</h3>
+        <p><strong>情绪：</strong>${escapeHtml(item.mood)}</p>
+        <p><strong>视觉：</strong>${escapeHtml(item.visual)}</p>
+        <p><strong>道具：</strong>${escapeHtml(item.props)}</p>
+        <p>${escapeHtml(item.raw.slice(0, 120))}${item.raw.length > 120 ? "..." : ""}</p>
+      </article>
+    `)
+    .join("");
+}
+
+function renderPrompts() {
+  els.promptsList.innerHTML = state.shots
+    .map((shot) => `
+      <article class="prompt-card">
+        <h3>${shot.id} ${escapeHtml(shot.sceneName)} / ${escapeHtml(shot.shotType)}</h3>
+        <p><strong>图片Prompt</strong></p>
+        <textarea readonly>${escapeHtml(shot.imagePrompt)}</textarea>
+        <p><strong>视频Prompt</strong></p>
+        <textarea readonly>${escapeHtml(shot.videoPrompt)}</textarea>
+      </article>
+    `)
+    .join("");
+}
+
+function renderTimeline() {
+  const total = state.shots.reduce((sum, shot) => sum + shot.duration, 0);
+  els.totalDuration.textContent = `${total}s`;
+  els.timeline.innerHTML = state.shots
+    .map((shot, index) => `
+      <div class="clip" data-shot-id="${shot.id}">
+        <div class="clip-index">${index + 1}</div>
+        <div>
+          <b>${escapeHtml(shot.title)}</b>
+          <span>${escapeHtml(shot.status)} · ${escapeHtml(shot.camera)}</span>
+        </div>
+        <div class="clip-duration">${shot.duration}s</div>
+      </div>
+    `)
+    .join("");
+}
+
+function renderSelectedShot() {
+  const shot = state.shots.find((item) => item.id === state.selectedShotId);
+  if (!shot) {
+    els.selectedShotTitle.textContent = "未选择镜头";
+    els.selectedShotMeta.textContent = "生成后可逐镜头操作";
+    els.previewFrame.querySelector("p").textContent = "选择镜头预览视频任务";
+    return;
+  }
+  els.selectedShotTitle.textContent = `${shot.id} ${shot.sceneName}`;
+  els.selectedShotMeta.textContent = `${shot.shotType} · ${shot.camera} · ${shot.duration}s · ${shot.status}`;
+  els.previewFrame.querySelector("p").textContent = shot.description.slice(0, 28);
+}
+
+function selectShot(id) {
+  state.selectedShotId = id;
+  renderShots();
+  renderSelectedShot();
+}
+
+function markReady(id = state.selectedShotId) {
+  const shot = state.shots.find((item) => item.id === id);
+  if (!shot) return;
+  shot.status = "可生成";
+  renderAll();
+}
+
+function rewritePrompt(id = state.selectedShotId) {
+  const shot = state.shots.find((item) => item.id === id);
+  if (!shot) return;
+  shot.videoPrompt += " 返修增强：加强人物表情和动作起止点，减少背景干扰，保持同一角色五官和服装。";
+  shot.imagePrompt += " 返修增强：主体更靠近镜头，构图更短剧化，面部表情更清晰。";
+  shot.status = "已返修Prompt";
+  renderAll();
+  switchTab("prompts");
+}
+
+function replaceClip() {
+  const shot = state.shots.find((item) => item.id === state.selectedShotId);
+  if (!shot) return;
+  shot.status = "等待替换素材";
+  shot.duration = Math.min(6, shot.duration + 1);
+  renderAll();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function switchTab(tabName) {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+  document.querySelectorAll(".tab-pane").forEach((pane) => {
+    pane.classList.toggle("active", pane.id === `${tabName}Tab`);
+  });
+}
+
+function exportCsv() {
+  if (!state.shots.length) return;
+  const headers = ["镜头ID", "场景", "画面内容", "景别", "机位运动", "角色", "情绪", "时长", "状态", "图片Prompt", "视频Prompt"];
+  const rows = state.shots.map((shot) => [
+    shot.id,
+    shot.sceneName,
+    shot.description,
+    shot.shotType,
+    shot.camera,
+    shot.people.join("、"),
+    shot.emotion,
+    `${shot.duration}s`,
+    shot.status,
+    shot.imagePrompt,
+    shot.videoPrompt,
+  ]);
+  downloadFile(`${state.project || "分镜生产包"}.csv`, toCsv([headers, ...rows]), "text/csv;charset=utf-8");
+}
+
+function toCsv(rows) {
+  return "\uFEFF" + rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+}
+
+function exportJson() {
+  if (!state.shots.length) return;
+  const payload = {
+    project: state.project,
+    genre: state.genre,
+    platform: state.platform,
+    scenes: state.scenes,
+    characters: state.characters,
+    shots: state.shots,
+    videoPipeline: {
+      sourceOfTruth: "storyboard_shots",
+      nextModules: ["first_frame_generation", "video_clip_generation", "clip_replacement", "timeline_assembly", "final_export"],
+    },
+  };
+  downloadFile(`${state.project || "生产包"}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function copySummary() {
+  if (!state.shots.length) return;
+  const summary = `【${state.project}】AI分镜试跑结果
+题材：${state.genre}
+平台模板：${state.platform}
+场次：${state.scenes.length}
+镜头：${state.shots.length}
+预计成片时长：${state.shots.reduce((sum, shot) => sum + shot.duration, 0)}秒
+
+已生成内容：场次拆解、分镜表、角色设定卡、场景设定卡、图片Prompt、视频Prompt、视频片段任务队列。
+下一步可接入生图/生视频API，对每个镜头进行首帧生成、视频片段生成、替换返修和时间线合成。`;
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(summary);
+  } else {
+    const textArea = document.createElement("textarea");
+    textArea.value = summary;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand("copy");
+    textArea.remove();
+  }
+  els.copySummaryBtn.textContent = "已复制";
+  setTimeout(() => (els.copySummaryBtn.textContent = "复制客户汇报"), 1200);
+}
+
+els.loadSampleBtn.addEventListener("click", () => {
+  els.scriptInput.value = sampleScript;
+  els.projectTitle.value = "错认的总裁 第1集";
+  updateStats();
+  generate();
+});
+
+els.generateBtn.addEventListener("click", generate);
+els.scriptInput.addEventListener("input", updateStats);
+els.genreSelect.addEventListener("change", () => (state.genre = els.genreSelect.value));
+els.platformSelect.addEventListener("change", () => (state.platform = els.platformSelect.value));
+
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+});
+
+els.shotsList.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  const card = event.target.closest(".shot-card");
+  if (card && !button) selectShot(card.dataset.shotId);
+  if (!button) return;
+  const { action, id } = button.dataset;
+  if (action === "select") selectShot(id);
+  if (action === "ready") markReady(id);
+  if (action === "rewrite") rewritePrompt(id);
+});
+
+els.timeline.addEventListener("click", (event) => {
+  const clip = event.target.closest(".clip");
+  if (clip) selectShot(clip.dataset.shotId);
+});
+
+els.markReadyBtn.addEventListener("click", () => markReady());
+els.rewriteBtn.addEventListener("click", () => rewritePrompt());
+els.replaceBtn.addEventListener("click", replaceClip);
+els.exportCsvBtn.addEventListener("click", exportCsv);
+els.exportJsonBtn.addEventListener("click", exportJson);
+els.copySummaryBtn.addEventListener("click", copySummary);
+
+updateStats();
+
+    </script>
+  </body>
+</html>
