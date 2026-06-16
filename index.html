@@ -615,6 +615,12 @@ textarea:focus {
   margin: 12px 0;
 }
 
+.queue-actions {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
 .clip-actions button {
   padding: 0 8px;
   font-size: 12px;
@@ -663,6 +669,77 @@ textarea:focus {
   max-height: 300px;
   overflow: auto;
   padding-right: 4px;
+}
+
+.video-jobs {
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.job-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 9px;
+}
+
+.job-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.job-top b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.job-status {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: #eef5f1;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.job-status.generating,
+.job-status.preparing {
+  background: #fff4df;
+  color: #8b5b15;
+}
+
+.job-status.failed {
+  background: #ffebe6;
+  color: #9d3f27;
+}
+
+.progress-track {
+  height: 7px;
+  border-radius: 999px;
+  background: #eee4d6;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--blue));
+}
+
+.job-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .clip {
@@ -910,6 +987,11 @@ textarea:focus {
             <button id="replaceBtn" type="button">替换片段</button>
           </div>
 
+          <div class="queue-actions">
+            <button id="submitQueueBtn" class="primary-btn wide" type="button">提交视频生成队列</button>
+            <button id="refreshQueueBtn" class="ghost-btn wide" type="button">刷新队列状态</button>
+          </div>
+
           <div class="automation-box">
             <div>
               <span>岗位自动化覆盖</span>
@@ -930,6 +1012,12 @@ textarea:focus {
             <strong id="totalDuration">0s</strong>
           </div>
           <div id="timeline" class="timeline"></div>
+
+          <div class="timeline-head">
+            <span>生成任务</span>
+            <strong id="queueCount">0</strong>
+          </div>
+          <div id="videoJobs" class="video-jobs"></div>
 
           <div class="export-box">
             <button id="exportCsvBtn" class="primary-btn wide" type="button">导出分镜CSV</button>
@@ -968,6 +1056,7 @@ const state = {
   platform: "即梦",
   scenes: [],
   shots: [],
+  videoJobs: [],
   characters: [],
   selectedShotId: null,
 };
@@ -989,7 +1078,9 @@ const els = {
   promptsList: document.getElementById("promptsList"),
   qcList: document.getElementById("qcList"),
   timeline: document.getElementById("timeline"),
+  videoJobs: document.getElementById("videoJobs"),
   totalDuration: document.getElementById("totalDuration"),
+  queueCount: document.getElementById("queueCount"),
   automationRate: document.getElementById("automationRate"),
   manualReviewCount: document.getElementById("manualReviewCount"),
   repairCount: document.getElementById("repairCount"),
@@ -1002,6 +1093,8 @@ const els = {
   markReadyBtn: document.getElementById("markReadyBtn"),
   rewriteBtn: document.getElementById("rewriteBtn"),
   replaceBtn: document.getElementById("replaceBtn"),
+  submitQueueBtn: document.getElementById("submitQueueBtn"),
+  refreshQueueBtn: document.getElementById("refreshQueueBtn"),
   runQcBtn: document.getElementById("runQcBtn"),
   autoRepairBtn: document.getElementById("autoRepairBtn"),
 };
@@ -1319,6 +1412,7 @@ function renderAll() {
   renderPrompts();
   renderQc();
   renderTimeline();
+  renderVideoJobs();
   renderSelectedShot();
   renderAutomationSummary();
 }
@@ -1439,6 +1533,39 @@ function renderTimeline() {
     .join("");
 }
 
+function renderVideoJobs() {
+  if (!els.videoJobs || !els.queueCount) return;
+  els.queueCount.textContent = String(state.videoJobs.length);
+  if (!state.videoJobs.length) {
+    els.videoJobs.innerHTML = `<div class="job-card"><p>暂无任务。生成分镜后点击“提交视频生成队列”。</p></div>`;
+    return;
+  }
+  els.videoJobs.innerHTML = state.videoJobs
+    .map((job) => {
+      const statusText = {
+        queued: "排队中",
+        preparing: "准备中",
+        generating: "生成中",
+        done: "已完成",
+        failed: "失败",
+      }[job.status] || job.status || "排队中";
+      const note = job.result?.clipUrl
+        ? `结果：${job.result.clipUrl}`
+        : `${job.provider || state.platform} · ${job.shotId || ""}`;
+      return `
+        <article class="job-card">
+          <div class="job-top">
+            <b>${escapeHtml(job.title || job.shotId || "视频任务")}</b>
+            <span class="job-status ${escapeHtml(job.status || "queued")}">${statusText}</span>
+          </div>
+          <div class="progress-track"><div class="progress-bar" style="width:${Number(job.progress) || 0}%"></div></div>
+          <p>${escapeHtml(note)}</p>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function renderAutomationSummary() {
   const total = state.shots.length;
   if (!total) {
@@ -1539,6 +1666,117 @@ function replaceClip() {
   shot.status = "等待替换素材";
   shot.duration = Math.min(6, shot.duration + 1);
   renderAll();
+}
+
+async function submitVideoQueue() {
+  const readyShots = state.shots.filter((shot) =>
+    ["可生成", "质检通过", "自动返修完成", "待确认", "建议抽查"].includes(shot.status)
+  );
+  if (!readyShots.length) return;
+  const payload = {
+    project: state.project,
+    platform: state.platform,
+    provider: state.platform,
+    shots: readyShots,
+  };
+  const result = await requestVideoQueue(payload);
+  if (result?.created?.length) {
+    state.videoJobs = [...result.created, ...state.videoJobs];
+  } else {
+    state.videoJobs = [...createLocalVideoJobs(readyShots), ...state.videoJobs];
+  }
+  renderVideoJobs();
+  pollVideoJobsSoon();
+}
+
+async function requestVideoQueue(payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1800);
+  try {
+    const response = await fetch("./api/video/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function createLocalVideoJobs(shots) {
+  const now = Date.now();
+  return shots.map((shot, index) => ({
+    id: `LOCAL-${now}-${index}`,
+    project: state.project,
+    shotId: shot.id,
+    title: shot.title,
+    provider: `${state.platform}模拟`,
+    prompt: shot.videoPrompt,
+    duration: shot.duration,
+    status: "queued",
+    progress: 0,
+    createdAt: Math.floor(now / 1000),
+    result: null,
+  }));
+}
+
+async function refreshVideoJobs() {
+  const serverJobs = await requestVideoJobs();
+  if (serverJobs) {
+    state.videoJobs = serverJobs;
+  } else {
+    advanceLocalVideoJobs();
+  }
+  renderVideoJobs();
+}
+
+async function requestVideoJobs() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1800);
+  try {
+    const response = await fetch("./api/video/jobs", { signal: controller.signal });
+    if (!response.ok) return null;
+    const result = await response.json();
+    return Array.isArray(result.jobs) ? result.jobs : null;
+  } catch (error) {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function advanceLocalVideoJobs() {
+  const now = Math.floor(Date.now() / 1000);
+  state.videoJobs = state.videoJobs.map((job) => {
+    if (job.status === "done" || job.status === "failed") return job;
+    const elapsed = now - Number(job.createdAt || now);
+    if (elapsed >= 12) {
+      return {
+        ...job,
+        status: "done",
+        progress: 100,
+        result: {
+          clipUrl: `mock://video/${job.shotId}.mp4`,
+          duration: job.duration,
+        },
+      };
+    }
+    if (elapsed >= 6) return { ...job, status: "generating", progress: 68 };
+    if (elapsed >= 2) return { ...job, status: "preparing", progress: 28 };
+    return job;
+  });
+}
+
+function pollVideoJobsSoon() {
+  setTimeout(refreshVideoJobs, 2500);
+  setTimeout(refreshVideoJobs, 7000);
+  setTimeout(refreshVideoJobs, 13000);
+  setTimeout(refreshVideoJobs, 19000);
 }
 
 function escapeHtml(value) {
@@ -1674,6 +1912,8 @@ els.timeline.addEventListener("click", (event) => {
 els.markReadyBtn.addEventListener("click", () => markReady());
 els.rewriteBtn.addEventListener("click", () => rewritePrompt());
 els.replaceBtn.addEventListener("click", replaceClip);
+els.submitQueueBtn.addEventListener("click", submitVideoQueue);
+els.refreshQueueBtn.addEventListener("click", refreshVideoJobs);
 els.runQcBtn.addEventListener("click", runQc);
 els.autoRepairBtn.addEventListener("click", autoRepairLowScoreShots);
 els.exportCsvBtn.addEventListener("click", exportCsv);
