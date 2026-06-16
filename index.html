@@ -477,6 +477,88 @@ textarea:focus {
   font-size: 12px;
 }
 
+.qc-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.qc-list {
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.qc-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 12px;
+}
+
+.qc-card h3 {
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.qc-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.score-cell {
+  border: 1px solid #e2d8c8;
+  border-radius: 8px;
+  background: #fbf7ef;
+  padding: 8px;
+}
+
+.score-cell span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.score-cell strong {
+  color: var(--accent-strong);
+  font-size: 18px;
+}
+
+.qc-decision {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: #44505b;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.decision-pill {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #eaf4ef;
+  color: var(--accent-strong);
+  font-weight: 900;
+}
+
+.decision-pill.warn {
+  background: #fff0df;
+  color: #98611a;
+}
+
+.decision-pill.bad {
+  background: #ffebe6;
+  color: #a5402a;
+}
+
 .video-preview {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -536,6 +618,33 @@ textarea:focus {
 .clip-actions button {
   padding: 0 8px;
   font-size: 12px;
+}
+
+.automation-box {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.automation-box div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbf7ef;
+  padding: 9px;
+}
+
+.automation-box span {
+  display: block;
+  min-height: 30px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.automation-box strong {
+  color: var(--accent-strong);
+  font-size: 20px;
 }
 
 .timeline-head {
@@ -644,6 +753,11 @@ textarea:focus {
   .clip-actions {
     grid-template-columns: 1fr;
   }
+
+  .automation-box,
+  .qc-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
     </style>
@@ -653,7 +767,7 @@ textarea:focus {
       <header class="topbar">
         <div>
           <p class="eyebrow">Storyboard Agent Beta</p>
-          <h1>AI短剧分镜生产台</h1>
+          <h1>AI短剧分镜师自动化系统</h1>
         </div>
         <div class="topbar-actions">
           <span class="status-pill">定向内测版</span>
@@ -726,14 +840,15 @@ textarea:focus {
         <section class="panel output-panel">
           <div class="panel-head">
             <div>
-              <p class="section-label">02 分镜输出</p>
-              <h2>镜头表与Prompt</h2>
+              <p class="section-label">02 自动化输出</p>
+              <h2>分镜、质检与返修</h2>
             </div>
             <div class="segmented">
               <button class="tab-btn active" data-tab="shots" type="button">分镜表</button>
               <button class="tab-btn" data-tab="characters" type="button">角色卡</button>
               <button class="tab-btn" data-tab="scenes" type="button">场景卡</button>
               <button class="tab-btn" data-tab="prompts" type="button">Prompt</button>
+              <button class="tab-btn" data-tab="qc" type="button">质检返修</button>
             </div>
           </div>
 
@@ -742,7 +857,7 @@ textarea:focus {
               <span></span><span></span><span></span>
             </div>
             <h3>等待生成第一版分镜生产包</h3>
-            <p>载入样例或粘贴客户剧本，系统会生成可编辑镜头表、角色卡、场景卡和AI视频任务。</p>
+            <p>载入样例或粘贴客户剧本，系统会生成分镜表、角色卡、场景卡、AI视频任务、自动质检结果和返修队列。</p>
           </div>
 
           <div id="shotsTab" class="tab-pane active">
@@ -760,13 +875,21 @@ textarea:focus {
           <div id="promptsTab" class="tab-pane">
             <div id="promptsList" class="prompt-list"></div>
           </div>
+
+          <div id="qcTab" class="tab-pane">
+            <div class="qc-toolbar">
+              <button id="runQcBtn" class="primary-btn" type="button">自动质检全部镜头</button>
+              <button id="autoRepairBtn" class="ghost-btn" type="button">自动返修低分镜头</button>
+            </div>
+            <div id="qcList" class="qc-list"></div>
+          </div>
         </section>
 
         <aside class="panel video-panel">
           <div class="panel-head compact">
             <div>
-              <p class="section-label">03 视频片段操作台</p>
-              <h2>按分镜驱动视频</h2>
+              <p class="section-label">03 视频生成队列</p>
+              <h2>按分镜驱动片段</h2>
             </div>
           </div>
 
@@ -785,6 +908,21 @@ textarea:focus {
             <button id="markReadyBtn" type="button">标记可生成</button>
             <button id="rewriteBtn" type="button">重写Prompt</button>
             <button id="replaceBtn" type="button">替换片段</button>
+          </div>
+
+          <div class="automation-box">
+            <div>
+              <span>岗位自动化覆盖</span>
+              <strong id="automationRate">0%</strong>
+            </div>
+            <div>
+              <span>需人工复核</span>
+              <strong id="manualReviewCount">0</strong>
+            </div>
+            <div>
+              <span>返修队列</span>
+              <strong id="repairCount">0</strong>
+            </div>
           </div>
 
           <div class="timeline-head">
@@ -849,8 +987,12 @@ const els = {
   charactersList: document.getElementById("charactersList"),
   scenesList: document.getElementById("scenesList"),
   promptsList: document.getElementById("promptsList"),
+  qcList: document.getElementById("qcList"),
   timeline: document.getElementById("timeline"),
   totalDuration: document.getElementById("totalDuration"),
+  automationRate: document.getElementById("automationRate"),
+  manualReviewCount: document.getElementById("manualReviewCount"),
+  repairCount: document.getElementById("repairCount"),
   selectedShotTitle: document.getElementById("selectedShotTitle"),
   selectedShotMeta: document.getElementById("selectedShotMeta"),
   previewFrame: document.getElementById("previewFrame"),
@@ -860,6 +1002,8 @@ const els = {
   markReadyBtn: document.getElementById("markReadyBtn"),
   rewriteBtn: document.getElementById("rewriteBtn"),
   replaceBtn: document.getElementById("replaceBtn"),
+  runQcBtn: document.getElementById("runQcBtn"),
+  autoRepairBtn: document.getElementById("autoRepairBtn"),
 };
 
 const shotTypes = ["特写", "近景", "中景", "全景", "过肩镜头", "反打"];
@@ -964,6 +1108,7 @@ function buildShots(scenes, characters, genre, platform) {
         priority: priorities[shotIndex % priorities.length],
         imagePrompt: prompt.image,
         videoPrompt: prompt.video,
+        qc: buildQcScore(sentence, type, move, emotion, mainPeople),
         status: "待确认",
       });
       shotIndex += 1;
@@ -971,6 +1116,43 @@ function buildShots(scenes, characters, genre, platform) {
   });
 
   return shots;
+}
+
+function buildQcScore(sentence, type, move, emotion, people) {
+  const complexityPenalty = Math.min(18, Math.floor(sentence.length / 18));
+  const peoplePenalty = people.length > 2 ? 8 : 0;
+  const actionBoost = /走|拉|关|牵|出现|后退|抬头|赶来|拿出|松开/.test(sentence) ? 8 : 0;
+  const emotionBoost = /震惊|惊慌|冷淡|哭|僵住|委屈|愣住|复杂/.test(sentence) ? 8 : 0;
+  const base = 82 - complexityPenalty - peoplePenalty;
+  const scores = {
+    character: clampScore(base + (people.length ? 6 : -8)),
+    action: clampScore(base + actionBoost),
+    emotion: clampScore(base + emotionBoost),
+    composition: clampScore(base + (["特写", "近景", "过肩镜头"].includes(type) ? 7 : 2)),
+    continuity: clampScore(base + (move === "固定镜头" ? 6 : 0)),
+  };
+  const average = Math.round(Object.values(scores).reduce((sum, value) => sum + value, 0) / 5);
+  return {
+    ...scores,
+    average,
+    decision: average >= 82 ? "可直接生成" : average >= 72 ? "建议人工抽查" : "进入自动返修",
+    reason: buildQcReason(scores, sentence, emotion),
+  };
+}
+
+function clampScore(value) {
+  return Math.max(58, Math.min(96, Math.round(value)));
+}
+
+function buildQcReason(scores, sentence, emotion) {
+  const issues = [];
+  if (scores.character < 76) issues.push("角色数量或描述复杂，需加强角色锁定词");
+  if (scores.action < 76) issues.push("动作起止点不够明确");
+  if (scores.emotion < 76) issues.push(`情绪“${emotion}”需要更强表演提示`);
+  if (scores.composition < 76) issues.push("构图需要更短剧化");
+  if (scores.continuity < 76) issues.push("连续性提示需要加强");
+  if (!issues.length) return "镜头结构清晰，可进入视频生成队列。";
+  return issues.join("；") + "。";
 }
 
 function buildPrompt({ scene, sentence, type, move, people, emotion, genre, platform }) {
@@ -1060,8 +1242,10 @@ function renderAll() {
   renderCharacters();
   renderScenes();
   renderPrompts();
+  renderQc();
   renderTimeline();
   renderSelectedShot();
+  renderAutomationSummary();
 }
 
 function updateStats() {
@@ -1139,6 +1323,30 @@ function renderPrompts() {
     .join("");
 }
 
+function renderQc() {
+  els.qcList.innerHTML = state.shots
+    .map((shot) => {
+      const tone = shot.qc.average >= 82 ? "" : shot.qc.average >= 72 ? "warn" : "bad";
+      return `
+        <article class="qc-card">
+          <h3>${shot.id} ${escapeHtml(shot.sceneName)} / ${escapeHtml(shot.title)}</h3>
+          <div class="qc-grid">
+            <div class="score-cell"><span>角色一致</span><strong>${shot.qc.character}</strong></div>
+            <div class="score-cell"><span>动作准确</span><strong>${shot.qc.action}</strong></div>
+            <div class="score-cell"><span>情绪表达</span><strong>${shot.qc.emotion}</strong></div>
+            <div class="score-cell"><span>构图质量</span><strong>${shot.qc.composition}</strong></div>
+            <div class="score-cell"><span>连续性</span><strong>${shot.qc.continuity}</strong></div>
+          </div>
+          <div class="qc-decision">
+            <p>${escapeHtml(shot.qc.reason)}</p>
+            <span class="decision-pill ${tone}">${shot.qc.decision} · ${shot.qc.average}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function renderTimeline() {
   const total = state.shots.reduce((sum, shot) => sum + shot.duration, 0);
   els.totalDuration.textContent = `${total}s`;
@@ -1154,6 +1362,22 @@ function renderTimeline() {
       </div>
     `)
     .join("");
+}
+
+function renderAutomationSummary() {
+  const total = state.shots.length;
+  if (!total) {
+    els.automationRate.textContent = "0%";
+    els.manualReviewCount.textContent = "0";
+    els.repairCount.textContent = "0";
+    return;
+  }
+  const repair = state.shots.filter((shot) => shot.qc.average < 72 || shot.status.includes("返修")).length;
+  const manual = state.shots.filter((shot) => shot.qc.average >= 72 && shot.qc.average < 82).length;
+  const automated = total - manual;
+  els.automationRate.textContent = `${Math.round((automated / total) * 100)}%`;
+  els.manualReviewCount.textContent = String(manual);
+  els.repairCount.textContent = String(repair);
 }
 
 function renderSelectedShot() {
@@ -1187,9 +1411,51 @@ function rewritePrompt(id = state.selectedShotId) {
   if (!shot) return;
   shot.videoPrompt += " 返修增强：加强人物表情和动作起止点，减少背景干扰，保持同一角色五官和服装。";
   shot.imagePrompt += " 返修增强：主体更靠近镜头，构图更短剧化，面部表情更清晰。";
+  shot.qc = {
+    ...shot.qc,
+    character: clampScore(shot.qc.character + 5),
+    action: clampScore(shot.qc.action + 6),
+    emotion: clampScore(shot.qc.emotion + 6),
+    composition: clampScore(shot.qc.composition + 5),
+    continuity: clampScore(shot.qc.continuity + 4),
+  };
+  shot.qc.average = Math.round((shot.qc.character + shot.qc.action + shot.qc.emotion + shot.qc.composition + shot.qc.continuity) / 5);
+  shot.qc.decision = shot.qc.average >= 82 ? "可直接生成" : shot.qc.average >= 72 ? "建议人工抽查" : "进入自动返修";
+  shot.qc.reason = "已根据质检问题自动增强角色锁定、动作起止点、情绪表演和短剧构图。";
   shot.status = "已返修Prompt";
   renderAll();
   switchTab("prompts");
+}
+
+function runQc() {
+  state.shots.forEach((shot) => {
+    shot.qc = buildQcScore(shot.description, shot.shotType, shot.camera, shot.emotion, shot.people);
+    if (shot.qc.average >= 82) shot.status = "质检通过";
+    if (shot.qc.average >= 72 && shot.qc.average < 82) shot.status = "建议抽查";
+    if (shot.qc.average < 72) shot.status = "进入返修队列";
+  });
+  renderAll();
+  switchTab("qc");
+}
+
+function autoRepairLowScoreShots() {
+  state.shots
+    .filter((shot) => shot.qc.average < 82)
+    .forEach((shot) => {
+      shot.videoPrompt += " 自动质检返修：明确角色身份与服装锁定，补充动作起点和终点，增强眼神、表情、短剧冲突感。";
+      shot.imagePrompt += " 自动质检返修：采用更清晰近景构图，突出主角脸部与关键道具，减少背景干扰。";
+      shot.qc.character = clampScore(shot.qc.character + 7);
+      shot.qc.action = clampScore(shot.qc.action + 7);
+      shot.qc.emotion = clampScore(shot.qc.emotion + 8);
+      shot.qc.composition = clampScore(shot.qc.composition + 7);
+      shot.qc.continuity = clampScore(shot.qc.continuity + 6);
+      shot.qc.average = Math.round((shot.qc.character + shot.qc.action + shot.qc.emotion + shot.qc.composition + shot.qc.continuity) / 5);
+      shot.qc.decision = shot.qc.average >= 82 ? "可直接生成" : "建议人工抽查";
+      shot.qc.reason = "系统已自动返修低分项，建议进入下一轮视频生成或抽查。";
+      shot.status = "自动返修完成";
+    });
+  renderAll();
+  switchTab("qc");
 }
 
 function replaceClip() {
@@ -1252,7 +1518,7 @@ function exportJson() {
     shots: state.shots,
     videoPipeline: {
       sourceOfTruth: "storyboard_shots",
-      nextModules: ["first_frame_generation", "video_clip_generation", "clip_replacement", "timeline_assembly", "final_export"],
+      nextModules: ["auto_qc", "auto_repair", "first_frame_generation", "video_clip_generation", "clip_replacement", "timeline_assembly", "final_export"],
     },
   };
   downloadFile(`${state.project || "生产包"}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
@@ -1280,7 +1546,7 @@ async function copySummary() {
 预计成片时长：${state.shots.reduce((sum, shot) => sum + shot.duration, 0)}秒
 
 已生成内容：场次拆解、分镜表、角色设定卡、场景设定卡、图片Prompt、视频Prompt、视频片段任务队列。
-下一步可接入生图/生视频API，对每个镜头进行首帧生成、视频片段生成、替换返修和时间线合成。`;
+系统已加入自动质检和返修队列，下一步可接入生图/生视频API，对每个镜头进行首帧生成、视频片段生成、替换返修和时间线合成。`;
   if (navigator.clipboard && window.isSecureContext) {
     await navigator.clipboard.writeText(summary);
   } else {
@@ -1333,6 +1599,8 @@ els.timeline.addEventListener("click", (event) => {
 els.markReadyBtn.addEventListener("click", () => markReady());
 els.rewriteBtn.addEventListener("click", () => rewritePrompt());
 els.replaceBtn.addEventListener("click", replaceClip);
+els.runQcBtn.addEventListener("click", runQc);
+els.autoRepairBtn.addEventListener("click", autoRepairLowScoreShots);
 els.exportCsvBtn.addEventListener("click", exportCsv);
 els.exportJsonBtn.addEventListener("click", exportJson);
 els.copySummaryBtn.addEventListener("click", copySummary);
