@@ -219,7 +219,7 @@ textarea:focus {
 
 .mini-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin: 12px 0;
 }
@@ -832,7 +832,8 @@ textarea:focus {
   }
 
   .automation-box,
-  .qc-grid {
+  .qc-grid,
+  .mini-stats {
     grid-template-columns: 1fr;
   }
 }
@@ -847,7 +848,7 @@ textarea:focus {
           <h1>AI短剧分镜师自动化系统</h1>
         </div>
         <div class="topbar-actions">
-          <span class="status-pill">定向内测版</span>
+          <span id="backendStatus" class="status-pill">定向内测版</span>
           <button id="loadSampleBtn" class="ghost-btn" type="button">载入样例</button>
           <button id="generateBtn" class="primary-btn" type="button">生成分镜包</button>
         </div>
@@ -907,9 +908,13 @@ textarea:focus {
               <strong id="shotCount">0</strong>
               <span>镜头</span>
             </div>
+            <div>
+              <strong id="generationSource">演示</strong>
+              <span>生成来源</span>
+            </div>
           </div>
 
-          <div class="notice">
+          <div id="systemNotice" class="notice">
             当前演示版重点打通“剧本拆解、分镜、角色场景、prompt和视频片段任务”。正式版将接入生图/生视频API、素材库和合成队列。
           </div>
         </section>
@@ -1059,6 +1064,8 @@ const state = {
   videoJobs: [],
   characters: [],
   selectedShotId: null,
+  backend: null,
+  generationSource: "演示",
 };
 
 const els = {
@@ -1081,6 +1088,9 @@ const els = {
   videoJobs: document.getElementById("videoJobs"),
   totalDuration: document.getElementById("totalDuration"),
   queueCount: document.getElementById("queueCount"),
+  backendStatus: document.getElementById("backendStatus"),
+  generationSource: document.getElementById("generationSource"),
+  systemNotice: document.getElementById("systemNotice"),
   automationRate: document.getElementById("automationRate"),
   manualReviewCount: document.getElementById("manualReviewCount"),
   repairCount: document.getElementById("repairCount"),
@@ -1331,6 +1341,7 @@ async function generate() {
     return;
   }
 
+  state.generationSource = "静态演示";
   const sceneBlocks = splitScenes(script);
   state.scenes = buildSceneCards(sceneBlocks);
   const names = extractCharacters(script);
@@ -1342,7 +1353,7 @@ async function generate() {
 
 async function requestServerGeneration(payload) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1800);
+  const timeout = setTimeout(() => controller.abort(), 90000);
   try {
     const response = await fetch("./api/storyboard", {
       method: "POST",
@@ -1362,6 +1373,7 @@ async function requestServerGeneration(payload) {
 }
 
 function applyGenerationResult(result) {
+  state.generationSource = result.source === "llm" ? "LLM" : "后端兜底";
   state.project = result.project || state.project;
   state.genre = result.genre || state.genre;
   state.platform = result.platform || state.platform;
@@ -1415,6 +1427,7 @@ function renderAll() {
   renderVideoJobs();
   renderSelectedShot();
   renderAutomationSummary();
+  renderSystemStatus();
 }
 
 function updateStats() {
@@ -1422,6 +1435,37 @@ function updateStats() {
   els.charCount.textContent = text.length;
   els.sceneCount.textContent = state.scenes.length;
   els.shotCount.textContent = state.shots.length;
+  renderSystemStatus();
+}
+
+function renderSystemStatus() {
+  if (els.generationSource) els.generationSource.textContent = state.generationSource || "演示";
+  if (!els.backendStatus || !els.systemNotice) return;
+  if (!state.backend) {
+    els.backendStatus.textContent = "静态演示版";
+    els.systemNotice.textContent = "当前页面可独立演示完整流程。本地生产服务启动后，会优先调用后端API，并可切换到真实LLM生成。";
+    return;
+  }
+  const mode = state.backend.mode === "llm" ? "LLM模式" : "后端兜底";
+  els.backendStatus.textContent = mode;
+  els.systemNotice.textContent = state.backend.mode === "llm"
+    ? `生产后端已连接：${state.backend.model}。当前生成会优先使用真实大模型。`
+    : "生产后端已连接，但未配置API Key。当前使用后端兜底生成器，视频队列可正常演示。";
+}
+
+async function detectBackend() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1800);
+  try {
+    const response = await fetch("./api/health", { signal: controller.signal });
+    if (!response.ok) return;
+    state.backend = await response.json();
+  } catch (error) {
+    state.backend = null;
+  } finally {
+    clearTimeout(timeout);
+    renderSystemStatus();
+  }
 }
 
 function renderShots() {
@@ -1921,6 +1965,7 @@ els.exportJsonBtn.addEventListener("click", exportJson);
 els.copySummaryBtn.addEventListener("click", copySummary);
 
 updateStats();
+detectBackend();
 
     </script>
   </body>
