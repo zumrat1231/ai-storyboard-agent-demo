@@ -219,7 +219,7 @@ textarea:focus {
 
 .mini-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin: 12px 0;
 }
@@ -912,6 +912,10 @@ textarea:focus {
               <strong id="generationSource">演示</strong>
               <span>生成来源</span>
             </div>
+            <div>
+              <strong id="videoProviderStatus">Mock</strong>
+              <span>视频模型</span>
+            </div>
           </div>
 
           <div id="systemNotice" class="notice">
@@ -1090,6 +1094,7 @@ const els = {
   queueCount: document.getElementById("queueCount"),
   backendStatus: document.getElementById("backendStatus"),
   generationSource: document.getElementById("generationSource"),
+  videoProviderStatus: document.getElementById("videoProviderStatus"),
   systemNotice: document.getElementById("systemNotice"),
   automationRate: document.getElementById("automationRate"),
   manualReviewCount: document.getElementById("manualReviewCount"),
@@ -1440,6 +1445,13 @@ function updateStats() {
 
 function renderSystemStatus() {
   if (els.generationSource) els.generationSource.textContent = state.generationSource || "演示";
+  if (els.videoProviderStatus) {
+    const provider = state.backend?.videoProvider?.provider || "mock";
+    const ready = state.backend?.videoProvider?.ready;
+    els.videoProviderStatus.textContent = provider === "jimeng"
+      ? ready ? "即梦已配置" : "即梦未配置"
+      : "Mock";
+  }
   if (!els.backendStatus || !els.systemNotice) return;
   if (!state.backend) {
     els.backendStatus.textContent = "静态演示版";
@@ -1449,7 +1461,7 @@ function renderSystemStatus() {
   const mode = state.backend.mode === "llm" ? "LLM模式" : "后端兜底";
   els.backendStatus.textContent = mode;
   els.systemNotice.textContent = state.backend.mode === "llm"
-    ? `生产后端已连接：${state.backend.model}。当前生成会优先使用真实大模型。`
+    ? `生产后端已连接：${state.backend.model}。当前生成会优先使用真实大模型。视频Provider：${state.backend.videoProvider?.provider || "mock"}。`
     : "生产后端已连接，但未配置API Key。当前使用后端兜底生成器，视频队列可正常演示。";
 }
 
@@ -1720,7 +1732,6 @@ async function submitVideoQueue() {
   const payload = {
     project: state.project,
     platform: state.platform,
-    provider: state.platform,
     shots: readyShots,
   };
   const result = await requestVideoQueue(payload);
